@@ -49,17 +49,19 @@ def main(argus):
         tokenizer=tokenizer, image_number=argus.image_number, make_batch=Transformer.Batch)
 
     # construct neural network
+    ########################################################## tree-lstm
     treelstm = TreeLstm.SimilarityTreeLSTM(vocab_size=argus.vocab_size, in_dim=argus.tree_embed_dim,
                                            mem_dim=argus.tree_mem_dim,
                                            hidden_dim=argus.tree_hidden_dim, sparsity=argus.sparse,
                                            freeze=argus.freeze_embed)
-    # tree-lstm
+    ########################################################## 图像的模型ResNet50
     resnet50 = resnet.resnet50(save_path=argus.save_resnet, pretrained=argus.pretrain_resnet,
                                image_embed=argus.image_embed)
-    # resnet
+    ########################################################## BiLSTM
     attention_bilstm = attention_Bilstm.BiLSTM(lstm_hidden_dim=argus.lstm_hidden_dim, vocabsize=argus.vocab_size,
                                                embed_dim=argus.lstm_embed_dim, lstm_num_layers=argus.lstm_num_layers,
                                                batchsize=argus.batch_size, negative_slope=argus.LeakyRelu_slope)
+    ########################################################## transformer的编码器
     tran_en_ffn = Transformer.PositionwiseFeedForward(d_model=argus.d_model, d_ff=argus.d_ff, dropout=argus.dropout)
     tran_en_mutihead = Transformer.MultiHeadedAttention(h=argus.head, d_model=argus.d_model)
     trans_encodelayer = Transformer.EncoderLayer(d_model=argus.d_model, self_attn=tran_en_mutihead,
@@ -70,7 +72,7 @@ def main(argus):
     tran_en_embed = nn.Sequential(tran_en_embeding, tran_en_position)
 
     trans_encoder = Transformer.Transformer_encoder(encoder=trans_encode, src_embed=tran_en_embed)  # transformer的编码器
-
+    ########################################################## transformer的解码器
     tran_de_ffn = deepcopy(tran_en_ffn)
     tran_de_mutihead1 = deepcopy(tran_en_mutihead)
     tran_de_mutihead2 = deepcopy(tran_en_mutihead)
@@ -84,7 +86,7 @@ def main(argus):
 
     trans_decoder = Transformer.Transformer_decoder(decoder=trans_decode, tgt_embed=tran_de_embed)  # transformer解码器
 
-    # model encoder
+    ########################################################## 整个encoder组装
     encoder = Mutimodel.Encoder(image_encoder=resnet50, tran_encoder=trans_encoder, treelstm=treelstm,
                                 Bilstm=attention_bilstm,
                                 res_embed=argus.image_embed, trans_embed=argus.d_model,
@@ -92,16 +94,16 @@ def main(argus):
                                 bilstm_embed=argus.lstm_embed_dim, negative_slope=argus.LeakyRelu_slope,
                                 device=device).to(device)
 
-    # model decoder
+    ########################################################## 整个encoder组装
     decoder = Mutimodel.Decoder(tran_decoder=trans_decoder, encoder_embed=argus.lstm_hidden_dim,
                                 decoder_embed=argus.d_model, negative_slope=argus.LeakyRelu_slope).to(device)
 
-    # model generator
+    ########################################################## 整个generator
     generator = Mutimodel.Generator(d_model=argus.d_model, vocab=argus.vocab_size).to(device)
-
+    ########################################################## 整个Mutimodel
     model = Mutimodel.Mutimodel(encoder=encoder, decoder=decoder, generation=generator)
-
-    criterion = nn.CrossEntropyLoss().to(device)  # Loss function
+    ########################################################## Loss function
+    criterion = nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=argus.lr, weight_decay=argus.wd)  # optimize
 
     # 构建训练器

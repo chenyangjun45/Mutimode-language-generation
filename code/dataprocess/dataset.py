@@ -8,6 +8,7 @@ from model.CreateTree import CreateTree
 
 # Dataset class for Mutimodel dataset
 class MutimodelDataset(data.Dataset):
+
     def __init__(self, loaddata, tokenizer, image_number, make_batch):  # argus.image_number):
         super(MutimodelDataset, self).__init__()
         self.image_number = image_number  # 表示图片与文本匹配的数量
@@ -45,6 +46,7 @@ class MutimodelDataset(data.Dataset):
             for sent in tqdm(range(len(sentences[sentence]))):  # 每篇文章
                 document = []
                 tree = []
+                # 处理一篇文章中的每个句子
                 for every_sentence in range(len(sentences[sentence][sent])):
                     token = self.tokenizer.encode(sentences[sentence][sent][every_sentence])
                     if len(token) >= len(parents[sentence][sent][every_sentence]):
